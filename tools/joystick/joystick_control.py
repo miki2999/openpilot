@@ -129,7 +129,7 @@ class PyGameJoystick:
         return False
 
       # Read steering (left stick horizontal)
-      steer_raw = self.joystick.get_axis(self.steer_axis)
+      steer_raw = self.joystick.get_axis(self.steer_axis) * -1
       steer = steer_raw if abs(steer_raw) > self.deadzone else 0.0
 
       # Read gas (right trigger)
