@@ -94,17 +94,21 @@ def get_stopped_equivalence_factor_krkeegen(v_lead, v_ego):
     # Softer v_diff_offset increase
     v_diff_offset = np.clip(delta_speed * 1.1, 0, v_diff_offset_max)
     scaling_factor = np.clip((speed_to_reach_max_v_diff_offset - v_ego) / speed_to_reach_max_v_diff_offset, 0, 1)
-    smooth_scaling = scaling_factor ** 2.5 * (10 - 9 * scaling_factor)
+    smooth_scaling = scaling_factor ** 2.0 * (10 - 8 * scaling_factor)  # Less aggressive scaling
 
     # Apply an additional softening effect for speeds below 5.6 m/s (20 kph)
     if v_ego < 5.6:
-      low_speed_factor = np.clip(v_ego / 5.6, 0.5, 1)  # Reduces impact at very low speeds
-      v_diff_offset *= low_speed_factor * 0.8  # Further softens low-speed braking
+      low_speed_factor = np.clip(v_ego / 5.6, 0.3, 1)  # Further softens low-speed braking
+      v_diff_offset *= low_speed_factor * 0.6  # Reduced impact at very low speeds
+
+    # Apply upper limit scaling to prevent excessive braking at higher speeds
+    v_diff_offset = np.clip(v_diff_offset, 0, v_diff_offset_max * scaling_factor * 0.8)
 
     v_diff_offset *= smooth_scaling
 
   stopping_distance = (v_lead ** 2) / (2 * COMFORT_BRAKE) + v_diff_offset + 0.5  # Small buffer for a softer stop
   return stopping_distance
+
 
 def get_safe_obstacle_distance(v_ego, t_follow):
   return (v_ego**2) / (2 * COMFORT_BRAKE) + t_follow * v_ego + STOP_DISTANCE
