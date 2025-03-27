@@ -92,25 +92,25 @@ def get_stopped_equivalence_factor_krkeegen(v_lead, v_ego):
 
     if np.any(delta_speed > 0):
         # Softer v_diff_offset increase
-        v_diff_offset = np.clip(delta_speed * 0.9, 0, v_diff_offset_max)  # Reduce gain from 1.1 to 0.9
+        v_diff_offset = np.clip(delta_speed * 0.95, 0, v_diff_offset_max)
         scaling_factor = np.clip((speed_to_reach_max_v_diff_offset - v_ego) / speed_to_reach_max_v_diff_offset, 0, 1)
-        smooth_scaling = scaling_factor ** 1.8 * (10 - 7.5 * scaling_factor)  # Less aggressive than before
+        smooth_scaling = scaling_factor ** 1.8 * (10 - 7.5 * scaling_factor)
 
-        # Reduce abrupt initial braking
-        initial_brake_softening = np.clip((v_ego - v_lead) / 10, 0, 1)  # Scales braking strength based on speed diff
-        v_diff_offset *= (0.5 + 0.5 * initial_brake_softening)  # Eases into braking instead of slamming
+        # Reduce abrupt initial braking but maintain safe following
+        initial_brake_softening = np.clip((v_ego - v_lead) / 8, 0, 1)
+        v_diff_offset *= (0.6 + 0.4 * initial_brake_softening)
 
-        # Apply an additional softening effect for speeds below 5.6 m/s (20 kph)
-        if v_ego < 5.6:
-            low_speed_factor = np.clip(v_ego / 5.6, 0.3, 1)
-            v_diff_offset *= low_speed_factor * 0.5  # Reduced even more to prevent jerky stops
+        # Adjust braking force below 10 kph to avoid phantom braking
+        if v_ego < 10:
+            low_speed_factor = np.clip(v_ego / 10, 0.3, 1)  # Avoid excessive braking at very low speeds
+            v_diff_offset *= low_speed_factor * 0.6  # Keeps it soft but ensures it doesn’t slow takeoff
 
         # Apply upper limit scaling to prevent excessive braking at higher speeds
-        v_diff_offset = np.clip(v_diff_offset, 0, v_diff_offset_max * scaling_factor * 0.75)
+        v_diff_offset = np.clip(v_diff_offset, 0, v_diff_offset_max * scaling_factor * 0.85)
 
         v_diff_offset *= smooth_scaling
 
-    stopping_distance = (v_lead ** 2) / (2 * COMFORT_BRAKE) + v_diff_offset + 0.4  # Small buffer for softer stops
+    stopping_distance = (v_lead ** 2) / (2 * COMFORT_BRAKE) + v_diff_offset + 0.38  # Slightly reduced buffer for quicker release
     return stopping_distance
 
   
