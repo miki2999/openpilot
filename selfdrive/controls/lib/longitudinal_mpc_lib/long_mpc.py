@@ -86,31 +86,31 @@ def get_stopped_equivalence_factor(v_lead):
 
 def get_stopped_equivalence_factor_krkeegen(v_lead, v_ego):
     v_diff_offset = 0
-    v_diff_offset_max = 12
+    v_diff_offset_max = 10  # Slightly reduced to keep following distance tighter
     speed_to_reach_max_v_diff_offset = 26 * CV.KPH_TO_MS  # in m/s
     delta_speed = v_lead - v_ego
 
     if np.any(delta_speed > 0):
-        # Softer v_diff_offset increase
-        v_diff_offset = np.clip(delta_speed * 0.95, 0, v_diff_offset_max)
+        # Keep v_diff_offset moderate to maintain a reasonable following distance
+        v_diff_offset = np.clip(delta_speed * 1.05, 0, v_diff_offset_max)
         scaling_factor = np.clip((speed_to_reach_max_v_diff_offset - v_ego) / speed_to_reach_max_v_diff_offset, 0, 1)
-        smooth_scaling = scaling_factor ** 1.8 * (10 - 7.5 * scaling_factor)
+        smooth_scaling = scaling_factor ** 1.6 * (10 - 7 * scaling_factor)  # Keep braking response slightly stronger
 
-        # Reduce abrupt initial braking but maintain safe following
-        initial_brake_softening = np.clip((v_ego - v_lead) / 8, 0, 1)
-        v_diff_offset *= (0.6 + 0.4 * initial_brake_softening)
+        # Reduce abrupt initial braking but maintain strong enough braking for tighter gaps
+        initial_brake_softening = np.clip((v_ego - v_lead) / 6, 0, 1)  # Adjusted for stronger response
+        v_diff_offset *= (0.7 + 0.3 * initial_brake_softening)  # Slightly stronger than before
 
-        # Adjust braking force below 10 kph to avoid phantom braking
+        # Improve low-speed braking to prevent excessive following distance
         if v_ego < 10:
-            low_speed_factor = np.clip(v_ego / 10, 0.3, 1)  # Avoid excessive braking at very low speeds
-            v_diff_offset *= low_speed_factor * 0.6  # Keeps it soft but ensures it doesn’t slow takeoff
+            low_speed_factor = np.clip(v_ego / 10, 0.5, 1)  # Keeps a more confident stop
+            v_diff_offset *= low_speed_factor * 0.75  # Strengthened to keep closer gap
 
         # Apply upper limit scaling to prevent excessive braking at higher speeds
-        v_diff_offset = np.clip(v_diff_offset, 0, v_diff_offset_max * scaling_factor * 0.85)
+        v_diff_offset = np.clip(v_diff_offset, 0, v_diff_offset_max * scaling_factor * 0.9)
 
         v_diff_offset *= smooth_scaling
 
-    stopping_distance = (v_lead ** 2) / (2 * COMFORT_BRAKE) + v_diff_offset + 0.38  # Slightly reduced buffer for quicker release
+    stopping_distance = (v_lead ** 2) / (2 * COMFORT_BRAKE) + v_diff_offset + 0.32  # Reduced buffer to stay closer
     return stopping_distance
 
   
