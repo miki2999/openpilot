@@ -113,9 +113,7 @@ def get_stopped_equivalence_factor_krkeegen(v_lead, v_ego):
     stopping_distance = (v_lead ** 2) / (2 * COMFORT_BRAKE) + v_diff_offset + 0.4  # Small buffer for softer stops
     return stopping_distance
 
-  stopping_distance = (v_lead ** 2) / (2 * COMFORT_BRAKE) + v_diff_offset + 0.5  # Small buffer for a softer stop
-  return stopping_distance
-
+  
 
 def get_safe_obstacle_distance(v_ego, t_follow):
   return (v_ego**2) / (2 * COMFORT_BRAKE) + t_follow * v_ego + STOP_DISTANCE
