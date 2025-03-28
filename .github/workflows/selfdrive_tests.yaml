@@ -153,6 +153,47 @@ jobs:
         name: ${{ github.job }}
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        
+  cereal_upstream_validation:
+    name: ensure cereal compatible with upstream
+    runs-on:
+      - 'ubuntu-24.04'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: ./.github/workflows/setup-with-retry
+      - name: Build openpilot
+        run: ${{ env.RUN }} "scons -j$(nproc)"
+      - name: Generate the log file
+        run: |
+          ${{ env.RUN }} "cereal/messaging/tests/validate_sp_cereal_upstream.py -g -f schema_instances.bin" && \
+          ls -la
+          ls -la cereal/messaging/tests
+      - name: 'Prepare artifact'
+        run: |
+          mkdir -p "cereal/messaging/tests/cereal_validations"
+          cp cereal/messaging/tests/validate_sp_cereal_upstream.py "cereal/messaging/tests/cereal_validations"
+          cp cereal/messaging/tests/schema_instances.bin "${{ env.OUTPUT_DIR }}/cereal/messaging/tests/cereal_validations"
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cereal_validations
+          path: cereal/messaging/tests/cereal_validations
+      - uses: actions/checkout@v4
+        with:
+          repository: 'commaai/openpilot'
+          submodules: true
+          ref: "refs/heads/master"
+      - name: Build openpilot
+        run: ${{ env.RUN }} "scons -j$(nproc)"
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: cereal_validations
+      - name: 'Run the validation'
+      - run: |
+          ${{ env.RUN }} "cereal/messaging/tests/cereal_validations/validate_sp_cereal_upstream.py -r -f cereal/messaging/tests/cereal_validations/schema_instances.bin"         
 
   process_replay:
     name: process replay
